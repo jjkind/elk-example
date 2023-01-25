@@ -1,0 +1,100 @@
+######################## Filebeat Configuration ############################
+
+# This file is a full configuration example documenting all non-deprecated
+# options in comments. For a shorter configuration example, that contains only
+# the most common options, please see filebeat.yml in the same directory.
+#
+# You can find the full configuration reference here:
+# https://www.elastic.co/guide/en/beats/filebeat/index.html
+
+logging.level: debug
+# Set logging level for filebeat components
+logging.selectors: [ harvester, input ]
+
+#=========================== Filebeat inputs =============================
+# List of inputs to fetch data.
+filebeat.inputs:
+
+#------------------------------ Container input --------------------------------
+# - type: container
+#   enabled: true
+
+#   # Paths for container logs that should be crawled and fetched.
+#   paths:
+#    -/var/lib/docker/containers/*/*.log
+
+#   # Configure stream to filter to a specific stream: stdout, stderr or all (default)
+#   stream: all
+
+
+
+
+
+# =========================== Filebeat autodiscover ============================
+
+# Autodiscover allows you to detect changes in the system and spawn new modules
+# or inputs as they happen.
+
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      templates:
+        # Only processes container events for destini images in the local registry
+        - condition:
+            contains.docker.container.image: docker-registry.dest.internal:5000
+            # equals.docker.container.image: docker-registry.dest.internal:5000
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+
+# List of enabled autodiscover providers
+#  providers:
+#    - type: docker
+#      templates:
+#        - condition:
+#            equals.docker.container.image: busybox
+#          config:
+#            - type: container
+#              paths:
+#                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+
+
+
+
+#==========================  Modules configuration =============================
+# filebeat.modules:
+
+# #------------------------------- Logstash Module -------------------------------
+# - module: logstash
+#   # logs
+#   log:
+#     enabled: true
+
+#     # Set custom paths for the log files. If left empty,
+#     # Filebeat will choose the paths depending on your OS.
+#     var.paths:
+
+#   # Slow logs
+#   slowlog:
+#     enabled: true
+
+#     # Set custom paths for the log files. If left empty,
+#     # Filebeat will choose the paths depending on your OS.
+#     var.paths:
+
+
+
+
+
+#==========================  OUTPUT configuration =============================
+output.logstash:
+  hosts: ["logstash01:5044"]
+  # loadbalance: true
+  # ssl.certificate_authorities: ["/etc/ca.crt"]
+  # ssl.certificate: "/etc/client.crt"
+  # ssl.key: "/etc/client.key"
+
+
+output.console:
+  pretty: true

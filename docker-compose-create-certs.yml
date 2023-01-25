@@ -1,0 +1,93 @@
+version: "3.2"
+
+# This compose file is used to creaste the certificates used by the various components in the ELK stack
+#
+# If components are added to the main docker-compose.yml file, you must ensure there is the appropriaste certificates
+# created for them in this file. Also check each Dockerfile to ensure any further processing is also correct.
+#
+# Once run, copy the certificate zip files from the target bind mount back into the project directory so that the building 
+# of the images can work.
+services:
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.1.2
+    volumes:
+    # Volume to store the output from the certificate generation which can then be used in building the elastic image
+      - type: bind
+        source: /data/elk/certs
+        target: /usr/share/elasticsearch/config/certs
+    user: "0"
+    command: >
+      bash -c '
+        rm -R config/certs/*;
+        echo "Creating CA";
+        bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
+        unzip config/certs/ca.zip -d config/certs;
+        echo "Creating certs";
+        echo -ne \
+        "instances:\n"\
+        "  - name: es01\n"\
+        "    dns:\n"\
+        "      - es01\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        "  - name: es02\n"\
+        "    dns:\n"\
+        "      - es02\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        "  - name: es03\n"\
+        "    dns:\n"\
+        "      - es03\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        "  - name: es04\n"\
+        "    dns:\n"\
+        "      - es04\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        "  - name: es05\n"\
+        "    dns:\n"\
+        "      - es05\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        "  - name: es06\n"\
+        "    dns:\n"\
+        "      - es06\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        "  - name: es07\n"\
+        "    dns:\n"\
+        "      - es07\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        "  - name: logstash01\n"\
+        "    dns:\n"\
+        "      - logstash01\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        "  - name: logstash02\n"\
+        "    dns:\n"\
+        "      - logstash02\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        "  - name: logstash03\n"\
+        "    dns:\n"\
+        "      - logstash03\n"\
+        "      - localhost\n"\
+        "    ip:\n"\
+        "      - 127.0.0.1\n"\
+        > config/certs/instances.yml;
+        bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
+        unzip config/certs/certs.zip -d config/certs;
+        echo "All done!";
+      '
+

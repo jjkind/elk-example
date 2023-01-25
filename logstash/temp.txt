@@ -1,0 +1,22 @@
+
+# Create the logstash writer role
+POST _security/role/logstash_writer
+{
+  "cluster": ["manage_index_templates", "monitor", "manage_ilm"], 
+  "indices": [
+    {
+      "names": [ "logstash-*" ], 
+      "privileges": ["write","create","create_index","manage","manage_ilm"]  
+    }
+  ]
+}
+
+
+
+# Create a logstash user and assign it the logstash_writer rolePOST _security/user/logstash_internal
+POST _security/user/logstash_internal
+{
+  "password" : "x-pack-test-password",
+  "roles" : [ "logstash_writer"],
+  "full_name" : "Internal Logstash User"
+}

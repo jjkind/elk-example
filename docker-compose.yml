@@ -1,0 +1,333 @@
+version: "3.2"
+
+services:
+  es01:
+    build:
+      context: .
+      dockerfile: ./elastic/Dockerfile
+      args:
+        - VERSION=8.1.2
+    image: docker-registry.dest.internal:5000/elastic:8.1.2
+    environment:
+      ELASTIC_PASSWORD: epassword
+      bootstrap.memory_lock: "true"
+      cluster.initial_master_nodes: es01,es02,es03
+      cluster.name: docker-cluster
+      discovery.seed_hosts: es02,es03
+      node.name: es01
+      xpack.license.self_generated.type: basic
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.certificate: certs/es01/es01.crt
+      xpack.security.http.ssl.certificate_authorities: certs/ca/ca.crt
+      xpack.security.http.ssl.enabled: "true"
+      xpack.security.http.ssl.key: certs/es01/es01.key
+      xpack.security.http.ssl.verification_mode: certificate
+      xpack.security.transport.ssl.certificate: certs/es01/es01.crt
+      xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt
+      xpack.security.transport.ssl.enabled: "true"
+      xpack.security.transport.ssl.key: certs/es01/es01.key
+      xpack.security.transport.ssl.verification_mode: certificate
+    healthcheck:
+      interval: 10s
+      retries: 120
+      test:
+      - CMD-SHELL
+      - curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing
+        authentication credentials'
+      timeout: 10s
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+    deploy:
+      placement:
+        constraints:
+          - "node.labels.node_id==1"
+      resources:
+        limits:
+          cpus: '4'
+          memory: '1G'
+        reservations:
+          cpus: '2'
+          memory: '1G'
+    networks:
+      - logging
+    volumes:
+      - type: bind
+        source: /data/elk/es01
+        target: /usr/share/elasticsearch/data
+
+
+  es02:
+    image: docker-registry.dest.internal:5000/elastic:8.1.2
+    environment:
+      bootstrap.memory_lock: "true"
+      cluster.initial_master_nodes: es01,es02,es03
+      cluster.name: docker-cluster
+      discovery.seed_hosts: es01,es03
+      node.name: es02
+      xpack.license.self_generated.type: basic
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.certificate: certs/es02/es02.crt
+      xpack.security.http.ssl.certificate_authorities: certs/ca/ca.crt
+      xpack.security.http.ssl.enabled: "true"
+      xpack.security.http.ssl.key: certs/es02/es02.key
+      xpack.security.http.ssl.verification_mode: certificate
+      xpack.security.transport.ssl.certificate: certs/es02/es02.crt
+      xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt
+      xpack.security.transport.ssl.enabled: "true"
+      xpack.security.transport.ssl.key: certs/es02/es02.key
+      xpack.security.transport.ssl.verification_mode: certificate
+    healthcheck:
+      interval: 10s
+      retries: 120
+      test:
+      - CMD-SHELL
+      - curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing
+        authentication credentials'
+      timeout: 10s
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+    deploy:
+      placement:
+        constraints:
+          - "node.labels.node_id==2"
+      resources:
+        limits:
+          cpus: '4'
+          memory: '1G'
+        reservations:
+          cpus: '2'
+          memory: '1G'
+    networks:
+      - logging
+    volumes:
+      - type: bind
+        source: /data/elk/es02
+        target: /usr/share/elasticsearch/data
+
+
+  es03:
+    image: docker-registry.dest.internal:5000/elastic:8.1.2
+    environment:
+      bootstrap.memory_lock: "true"
+      cluster.initial_master_nodes: es01,es02,es03
+      cluster.name: docker-cluster
+      discovery.seed_hosts: es01,es02
+      node.name: es03
+      xpack.license.self_generated.type: basic
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.certificate: certs/es03/es03.crt
+      xpack.security.http.ssl.certificate_authorities: certs/ca/ca.crt
+      xpack.security.http.ssl.enabled: "true"
+      xpack.security.http.ssl.key: certs/es03/es03.key
+      xpack.security.http.ssl.verification_mode: certificate
+      xpack.security.transport.ssl.certificate: certs/es03/es03.crt
+      xpack.security.transport.ssl.certificate_authorities: certs/ca/ca.crt
+      xpack.security.transport.ssl.enabled: "true"
+      xpack.security.transport.ssl.key: certs/es03/es03.key
+      xpack.security.transport.ssl.verification_mode: certificate
+    healthcheck:
+      interval: 10s
+      retries: 120
+      test:
+      - CMD-SHELL
+      - curl -s --cacert config/certs/ca/ca.crt https://localhost:9200 | grep -q 'missing
+        authentication credentials'
+      timeout: 10s
+    ulimits:
+      memlock:
+        hard: -1
+        soft: -1
+    deploy:
+      placement:
+        constraints:
+          - "node.labels.node_id==3"
+      resources:
+        limits:
+          cpus: '4'
+          memory: '1G'
+        reservations:
+          cpus: '2'
+          memory: '1G'
+    networks:
+      - logging
+    volumes:
+      - type: bind
+        source: /data/elk/es03
+        target: /usr/share/elasticsearch/data
+
+
+  kibana:
+    build:
+      context: .
+      dockerfile: ./kibana/Dockerfile
+      args:
+        - VERSION=8.1.2
+    image: docker-registry.dest.internal:5000/kibana:8.1.2
+    environment:
+      ELASTICSEARCH_HOSTS: https://es01:9200
+      ELASTICSEARCH_PASSWORD: kpassword
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: config/certs/ca/ca.crt
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTIC_PASSWORD: epassword
+      SERVERNAME: kibana
+    healthcheck:
+      interval: 10s
+      retries: 120
+      test:
+      - CMD-SHELL
+      - curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'
+      timeout: 10s
+    ports:
+    - published: 5601
+      target: 5601
+    deploy:
+      placement:
+        constraints:
+          - "node.labels.node_id==4"
+      resources:
+        limits:
+          cpus: '2'
+          memory: '1G'
+        reservations:
+          cpus: '1'
+          memory: '1G'
+    networks:
+      - logging
+    volumes:
+      - type: bind
+        source: /data/elk/kibana
+        target: /usr/share/kibana/data
+
+
+  logstash01:
+    build:
+      context: .
+      dockerfile: ./logstash/Dockerfile
+      args:
+        - VERSION=8.1.2
+    image: docker-registry.dest.internal:5000/logstash:8.1.2
+    # image: docker.elastic.co/logstash/logstash:8.1.2
+    environment:
+    #   ELASTICSEARCH_HOSTS: https://es01:9200
+    #   ELASTICSEARCH_PASSWORD: kpassword
+    #   ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: config/certs/ca/ca.crt
+    #   ELASTICSEARCH_USERNAME: kibana_system
+      ELASTIC_PASSWORD: epassword
+      LOGSTASH_WRITER_PASSWORD: lpassword
+      LOGSTASH_SYSTEM_PASSWORD: lspassword
+    #   SERVERNAME: kibana
+    # healthcheck:
+    #   interval: 10s
+    #   retries: 120
+    #   test:
+    #   - CMD-SHELL
+    #   - curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'
+    #   timeout: 10s
+    # ports:
+    # - published: 5601
+    #   target: 5601
+    # command: sleep 999999999999s
+    deploy:
+      placement:
+        constraints:
+          - "node.labels.node_id==4"
+      # The memory is allocated at 1G by the JVM 
+      resources:
+        limits:
+          cpus: '2'
+          memory: '1G'
+        reservations:
+          cpus: '1'
+          memory: '1G'
+    networks:
+      - logging
+    volumes:
+    # # Pipeline configurration files
+    #   - type: bind
+    #     source: /data/elk/logstash/pipeline/
+    #     target: /usr/share/logstash/pipeline/
+      # Logstash configuration
+      # - type: bind
+      #   source: /data/elk/logstash01/config/
+      #   target: /usr/share/logstash/config/
+      # Persistent storage for the logstash data
+      - type: bind
+        source: /data/elk/logstash01/data/
+        target: /usr/share/logstash/data/
+
+
+
+
+
+
+  filebeat:
+    build:
+      context: .
+      dockerfile: ./filebeat/Dockerfile
+      args:
+        - VERSION=8.1.2
+    image: docker-registry.dest.internal:5000/filebeat:8.1.2
+    # https://github.com/docker/swarmkit/issues/1951
+    hostname: "{{.Node.Hostname}}-filebeat"
+    # Need to override user so we can access the log files, and docker.sock
+    user: root
+    networks:
+      - logging
+    # configs:
+    #   - source: fb_config
+    #     target: /usr/share/filebeat/filebeat.yml
+    volumes:
+      # - filebeat:/usr/share/filebeat/data
+      # - type: bind
+      #   source: /data/elk/filebeat/data/
+      #   target: /usr/share/filebeat/data/
+      - /var/run/docker.sock:/var/run/docker.sock
+      # This is needed for filebeat to load container log path as specified in filebeat.yml
+      - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
+
+      # # This is needed for filebeat to load jenkins build log path as specified in filebeat.yml
+      # - /var/lib/docker/volumes/jenkins_home/_data/jobs/:/var/lib/docker/volumes/jenkins_home/_data/jobs/:ro
+
+      # This is needed for filebeat to load logs for system and auth modules
+      # - /var/log/:/var/log/:ro
+      # This is needed for filebeat to load logs for auditd module. you might have to install audit system
+      # on ubuntu first (sudo apt-get install -y auditd audispd-plugins)
+      # - /var/log/audit/:/var/log/audit/:ro
+    environment:
+      # - ELASTICSEARCH_HOST=${ELASTICSEARCH_HOST:-node1}
+      # - KIBANA_HOST=${KIBANA_HOST:-node1}
+      - KIBANA_HOST=kibana
+      # - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME:-elastic}
+      # - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD:-changeme}
+    # disable strict permission checks
+    command: ["--strict.perms=false"]
+    # TODO uncomment this section for deployment on all nodes in the swarm
+    # deploy:
+    #   mode: global
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Keep the logging solution isolated on its own network
+networks:
+  logging:
+    driver: overlay
